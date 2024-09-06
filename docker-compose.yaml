@@ -1,0 +1,62 @@
+x-default-logging: &logging
+  driver: 'json-file'
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+services:
+# Grafana Loki
+  loki:
+    image: grafana/loki:3.1.0
+    container_name: loki
+    restart: always
+    command:
+      - '-config.file=/etc/loki/local-config.yaml'
+      - '-config.expand-env=true'
+    volumes:
+      - '${PWD}/infra/loki/loki.yaml:/etc/loki/local-config.yaml'
+      - '${PWD}/data/loki:/tmp/loki'
+    ports:
+      - '3100:3100'
+    logging: *logging
+    networks:
+      - grastack
+    user: "root" # 컨테이너 내부에서 루트 권한 사용
+
+# Grafana init
+  init_grafana:
+    image: grafana/grafana:11.1.0
+    user: root
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        chown -R 65534:65534 /var/lib/grafana
+    volumes:
+      - './data/grafana:/var/lib/grafana'
+    networks:
+      - grastack
+
+# Grafana 대시보드
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: grafana
+    restart: always
+    depends_on:
+      - loki
+      - init_grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - '${PWD}/infra/grafana/provisioning/:/etc/grafana/provisioning/'
+      - './data/grafana:/var/lib/grafana'
+    ports:
+      - '9300:3000'
+    logging: *logging
+    user: "65534"
+    networks:
+      - grastack
+
+networks:
+  grastack:
+    driver: bridge

@@ -1,0 +1,47 @@
+auth_enabled: false # 인증을 비활성화
+
+server:
+  http_listen_address: 0.0.0.0
+  grpc_listen_address: 0.0.0.0
+  http_listen_port: 3100 # HTTP server listen port (default: 3100).
+  log_level: info # 디버그 로그 레벨로 변경하여 문제 진단
+
+common:
+  path_prefix: /tmp/loki
+  storage:
+    filesystem:
+      chunks_directory: /tmp/loki/chunks
+      rules_directory: /tmp/loki/rules
+  replication_factor: 1 # 데이터의 복제본 수를 2로 증가
+  ring:
+    instance_addr: 0.0.0.0
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-07-24 # 스키마 시작 날짜
+      store: tsdb # 데이터를 TSDB에 저장
+      object_store: filesystem # 파일 시스템을 객체 저장소로 사용
+      schema: v13 # 스키마 버전
+      index:
+        prefix: index_ # 인덱스 키 접두사
+        period: 24h # 인덱스 유지 기간
+
+storage_config:
+  filesystem:
+    directory: /tmp/loki/chunks # 로그 데이터를 저장할 디렉터리
+
+compactor:
+  working_directory: /data/retention  # 컴팩터 작업 디렉터리
+  delete_request_store: filesystem  # 삭제 요청 저장소: 파일 시스템
+  retention_enabled: true  # 보존 정책 활성화
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  compaction_interval: 10m
+
+limits_config:
+  max_query_lookback: 72h  # 최대 쿼리 조회 기간 (3일)
+  retention_period: 72h  # 데이터 보존 기간 (3일)
+  ingestion_rate_mb: 8  # 테넌트 당 초당 수집 속도를 8MB로 설정
+  ingestion_burst_size_mb: 16  # 수집 버스트 크기를 16MB로 설정
