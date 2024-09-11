@@ -38,7 +38,7 @@ sudo service docker restart
 }
 ```
 
-### 모니터링 서버 구축
+### 2-1. 모니터링 서버 구축
 ```
 .
 ├── README.md
@@ -58,11 +58,56 @@ sudo service docker restart
         └── loki.yaml
 ```
 
-### 계측 서버 구축
-1. 파일 로그 수집 시
+### 2-2. 계측 서버 구축
+**2-2-1. 파일 로그 수집 시**
+---
+```
+.
+├── config
+│   └── config.yaml
+└── docker-compose.yaml
+```
+- Docker compose file
+```
+services:
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:3.1.0
+    restart: always
+    command:
+      - '-config.file=/etc/promtail/config.yaml'
+    volumes:
+      - '/var/log/apache2/:/var/log/access'
+      - '${PWD}/config/config.yaml:/etc/promtail/config.yaml:ro'
+      -  '/var/lib/docker/containers:/var/lib/docker/containers:ro'
+      -  /var/run/docker.sock:/var/run/docker.sock 
+```
+- config
+```
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: "info"
 
-2. 컨테이너 로그 수집 시
-**2-1. 플러그인 설치**
+positions:
+  filename: /tmp/positions.yaml
+
+clients: ## 모니터링 인스턴스 IP 주소:포트 삽입
+  - url: http://[모니터링 인스턴스 IP 주소:포트]/loki/api/v1/push
+
+scrape_configs:
+########################### 파일 로그 #################################
+- job_name: filelogs
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: varlogs
+      __path__: [컨테이너 내의 파일 로그가 저장되는 위치]
+```
+**2-2-2. 컨테이너 로그 수집 시**
+---
+**2-2-2-1.플러그인 설치**
 ```
 docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
 ```
@@ -72,7 +117,7 @@ docker plugin disable loki --force
 docker plugin rm loki
 ```
 
-**2-2. [수정, 생성] /etc/docker/daemon.json**
+**2-2-2-2. [수정, 생성] /etc/docker/daemon.json**
 - /etc/docker/daemon.json 파일 내용
 ```
 {
