@@ -107,20 +107,19 @@ sudo service docker restart
         __path__: [컨테이너 내의 파일 로그가 저장되는 위치]
   ```
 ### 3-2. 컨테이너 로그 수집
----
-**3-2-1.플러그인 설치**
-```
-docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
-```
+**Loki 플러그인 설치**
+  ```
+  docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+  ```
 
-**3-2-2.플러그인 삭제**
-```
-docker plugin disable loki --force
-docker plugin rm loki
-```
+**Loki 플러그인 삭제**
+  ```
+  docker plugin disable loki --force
+  docker plugin rm loki
+  ```
 
-**2-2-2-2. [수정, 생성] /etc/docker/daemon.json**
-- /etc/docker/daemon.json 파일 내용
+**[수정 및 생성] /etc/docker/daemon.json**
+> /etc/docker/daemon.json 파일 내용을 아래와 같이 수정
 ```
 {
   "debug": true,
@@ -132,29 +131,29 @@ docker plugin rm loki
 }
 ```
 - /etc/docker/daemon.json 적용
-```
-sudo systemctl restart docker
-```
+  ```
+  sudo systemctl restart docker
+  ```
 
-- Docker-compose 적용(예시)
-```
-x-default-logging: &logging
-  driver: 'loki'
-  options:
-    loki-url : "http://[로키IP 주소]:3100/loki/api/v1/push"
+- 로그 수집 컨테이너에 적용(docker-compose)
+  ```
+  x-default-logging: &logging
+    driver: 'loki'
+    options:
+      loki-url : "http://[로키IP 주소]:3100/loki/api/v1/push"
 
-services:
-  slackbot:
-    image: slackbot:latest
-    container_name: slackbot_container
-    build:
-      context: .
-      dockerfile: dockerfile
-    ulimits:
-      memlock: -1
-      stack: 67108864
-    tty: true
-    restart: always
-    logging: *logging
-    privileged: true
-```
+  services:
+    slackbot:
+      image: slackbot:latest
+      container_name: slackbot_container
+      build:
+        context: .
+        dockerfile: dockerfile
+      ulimits:
+        memlock: -1
+        stack: 67108864
+      tty: true
+      restart: always
+      logging: *logging ## 이부분
+      privileged: true
+  ```
